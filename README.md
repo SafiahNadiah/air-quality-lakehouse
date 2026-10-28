@@ -2,7 +2,7 @@
 
 A Databricks medallion pipeline (bronze, silver, gold) that turns Malaysia's monthly air pollution open data into a star schema, validates it with data quality checks, and serves it through BigQuery and a Looker Studio dashboard.
 
-[Dashboard](screenshots/07_Air_Quality_Dashboard.pdf)
+**Dashboard:** [Air Quality Dashboard (PDF)](screenshots/07_Air_Quality_Dashboard.pdf)
 
 ## Problem
 
@@ -46,8 +46,9 @@ Processing runs on Databricks Free Edition (serverless) using SQL and Python. Ta
 | `03_gold_star_schema` | Build dimension, fact and aggregate tables |
 | `04_data_quality_checks` | Run 9 validation checks and store the results |
 | `05_analysis_queries` | Trend, ranking and rolling-average queries |
+| `06_anomaly_detection` | Flag unusual months in the PM2.5 and NO2 series (robust z-score and Isolation Forest) |
 
-Run order is 01 to 05 (notebook 04 reads the gold tables).
+Run order is 01 to 06 (notebook 04 reads the gold tables).
 
 Record counts: bronze **576** rows (96 months x 6 pollutants), silver **576** rows (the row-count check confirms no rows were lost), gold fact **[ADD]** rows (silver rows with a measurement).
 
@@ -123,6 +124,25 @@ Example findings:
 
 ![Top 5 worst months](screenshots/05_top5_worst_months_per_pollutant.png)
 
+## Anomaly detection (learning project)
+
+Notebook `06_anomaly_detection` flags unusual months in the PM2.5 and NO2 series using two simple, unsupervised methods: a **robust z-score** (median and MAD, flag when |z| > 3.5) and an **Isolation Forest** (scikit-learn, most isolated 5% of months). Results are saved to `gold_anomalies`.
+
+Ten months were flagged, and four were flagged by both methods:
+
+| Pollutant | Month | Value | Robust z |
+|---|---|---|---|
+| PM2.5 | 2019-09 | 52.86 µg/m³ | 14.2 |
+| PM2.5 | 2019-08 | 31.74 µg/m³ | 6.5 |
+| PM2.5 | 2018-08 | 25.84 µg/m³ | 4.4 |
+| NO2 | 2020-04 | 0.0032 ppm | -3.8 |
+
+The PM2.5 peak in August and September 2019 lines up with the CO peak in September 2019 (query 2), and the NO2 low in April 2020 is the lowest value in the series. These may relate to known events (the 2019 regional haze and the 2020 movement control order), but this analysis does not test that.
+
+Limitations: the methods look at the value only and do not remove seasonality or trend, so a flagged month is a prompt to investigate, not proof of an event.
+
+![Anomaly detection](screenshots/08_anomaly_detection.png)
+
 ## Serving layer: BigQuery and Looker Studio
 
 The gold tables were exported to CSV from Databricks and loaded into a BigQuery dataset (`air_quality`) using the BigQuery sandbox. A Looker Studio dashboard reads `gold_agg_yearly` and shows the yearly trend per pollutant, year-over-year change and data completeness.
@@ -133,7 +153,7 @@ The gold tables were exported to CSV from Databricks and loaded into a BigQuery 
 
 1. Download the CSV from data.gov.my (link above).
 2. In Databricks, upload it to the volume `workspace.air_quality.raw` (Catalog, then Upload to this volume) as `air_pollution.csv`.
-3. Run notebooks `01` to `05` in order. Every notebook can be re-run safely.
+3. Run notebooks `01` to `06` in order. Every notebook can be re-run safely.
 
 ## Limitations
 
@@ -145,13 +165,13 @@ The gold tables were exported to CSV from Databricks and loaded into a BigQuery 
 ## Next steps
 
 - Schedule the notebooks with Databricks Workflows.
-- Add anomaly detection on the PM2.5 and NO2 time series.
+- Make the anomaly detection seasonality-aware (for example by comparing each month with the same month in other years).
 - Rewrite transformations in PySpark and model the gold layer in dbt.
 - Define the infrastructure (BigQuery dataset, storage) as code with Terraform.
 
 ## Tech stack
 
-Databricks (serverless, Unity Catalog), SQL, Python, BigQuery, Looker Studio, GitHub.
+Databricks (serverless, Unity Catalog), SQL, Python, scikit-learn, BigQuery, Looker Studio, GitHub.
 
 ## Data attribution
 
