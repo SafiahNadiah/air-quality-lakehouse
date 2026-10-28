@@ -2,7 +2,7 @@
 
 A Databricks medallion pipeline (bronze, silver, gold) that turns Malaysia's monthly air pollution open data into a star schema, validates it with data quality checks, and serves it through BigQuery and a Looker Studio dashboard.
 
-![Dashboard](screenshots/07_dashboard.png)
+![Dashboard](screenshots/07_dashboard.pdf)
 
 ## Problem
 
