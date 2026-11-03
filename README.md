@@ -32,6 +32,8 @@ flowchart LR
     D --> E[Data quality checks]
     D --> F[Analysis queries]
     D -->|CSV export, manual load| G[BigQuery]
+    D -->|CSV export| I[SQLite copy]
+    I --> J[MCP server]
     G --> H[Looker Studio dashboard]
 ```
 
@@ -50,7 +52,7 @@ Processing runs on Databricks Free Edition (serverless) using SQL and Python. Ta
 
 Run order is 01 to 06 (notebook 04 reads the gold tables).
 
-Record counts: bronze **576** rows (96 months x 6 pollutants), silver **576** rows (the row-count check confirms no rows were lost), gold fact **[ADD]** rows (silver rows with a measurement).
+Record counts: bronze **576** rows (96 months x 6 pollutants), silver **576** rows (the row-count check confirms no rows were lost), gold fact **542** rows (the 576 silver rows minus 34 months without a measurement).
 
 ## Gold layer: star schema
 
@@ -120,7 +122,11 @@ Queries are in [`bigquery/`](bigquery/) (BigQuery SQL) and in notebook `05_analy
 Example findings:
 - CO peaked in **September 2019** at 0.888 ppm.
 - PM2.5 yearly average rose from 16.25 µg/m³ in 2018 to 20.49 in 2019, then fell to 12.29 in 2020, about **-40%** year over year.
-- April 2020 NO2 compared with other Aprils: **[ADD result from query 3]**.
+- April 2020 NO2 compared with other Aprils:
+
+| april_2020 | avg_other_aprils | pct_difference |
+|------------|-----------------|---------------|
+| 0.0032     | 0.0072          | -55.6         |
 
 ![Top 5 worst months](screenshots/05_top5_worst_months_per_pollutant.png)
 
@@ -142,6 +148,10 @@ The PM2.5 peak in August and September 2019 lines up with the CO peak in Septemb
 Limitations: the methods look at the value only and do not remove seasonality or trend, so a flagged month is a prompt to investigate, not proof of an event.
 
 ![Anomaly detection](screenshots/08_anomaly_detection.png)
+
+## MCP server
+
+[`mcp_server/`](mcp_server/) exposes the gold tables to AI clients through four read-only MCP tools (yearly averages, worst months, anomalies and data quality results). Inputs are validated, queries are fixed and parameterised, and the database is opened read-only. It reads a SQLite copy of the gold tables exported from Databricks, and was tested with the MCP Inspector. See [`mcp_server/README.md`](mcp_server/README.md).
 
 ## Serving layer: BigQuery and Looker Studio
 
