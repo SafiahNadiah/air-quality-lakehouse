@@ -1,0 +1,7 @@
+pollutant_key,pollutant_code,pollutant_name,pollutant_group,unit_assumed
+1,CO,Carbon monoxide,Gas,ppm
+2,NO2,Nitrogen dioxide,Gas,ppm
+3,O3,Ozone,Gas,ppm
+4,SO2,Sulphur dioxide,Gas,ppm
+5,PM10,Particulate matter (PM10),Particulate,ug/m3
+6,PM2.5,Particulate matter (PM2.5),Particulate,ug/m3

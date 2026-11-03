@@ -1,0 +1,10 @@
+run_ts,check_name,severity,status,violations,description
+2026-10-22 06:07:02.874856,bronze_silver_rowcount_match,critical,PASS,0,No rows lost or duplicated between bronze and silver
+2026-10-22 06:07:02.874856,no_duplicate_month_pollutant,critical,PASS,0,One row per month and pollutant
+2026-10-22 06:07:02.874856,dates_parsed,critical,PASS,0,Every date string was parsed
+2026-10-22 06:07:02.874856,dates_are_first_of_month,critical,PASS,0,Monthly data should be dated on the 1st
+2026-10-22 06:07:02.874856,no_negative_concentration,critical,PASS,0,A concentration can not be negative
+2026-10-22 06:07:02.874856,pollutants_exist_in_dimension,critical,PASS,0,Every pollutant in the data is described in gold_dim_pollutant
+2026-10-22 06:07:02.874856,fact_matches_silver,critical,PASS,0,Fact table holds exactly the non-missing silver rows
+2026-10-22 06:07:02.874856,missing_values,warning,WARN,34,Months without a measurement (see gold_dq_completeness)
+2026-10-22 06:07:02.874856,extreme_values_z_gt_3,warning,WARN,11,"Values more than 3 standard deviations from the pollutant mean (could be real events, review them)"
