@@ -34,7 +34,7 @@ terraform apply
 
 To remove everything: `terraform destroy`.
 
-![Terraform apply](../screenshots/10_terraform_apply.png)
+![Terraform apply](../screenshots/09_terraform_apply.png)
 
 ## Design notes
 
