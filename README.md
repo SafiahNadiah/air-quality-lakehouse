@@ -122,11 +122,6 @@ Queries are in [`bigquery/`](bigquery/) (BigQuery SQL) and in notebook `05_analy
 Example findings:
 - CO peaked in **September 2019** at 0.888 ppm.
 - PM2.5 yearly average rose from 16.25 µg/m³ in 2018 to 20.49 in 2019, then fell to 12.29 in 2020, about **-40%** year over year.
-- April 2020 NO2 compared with other Aprils:
-
-| april_2020 | avg_other_aprils | pct_difference |
-|------------|-----------------|---------------|
-| 0.0032     | 0.0072          | -55.6         |
 
 ![Top 5 worst months](screenshots/05_top5_worst_months_per_pollutant.png)
 
@@ -159,6 +154,12 @@ The gold tables were exported to CSV from Databricks and loaded into a BigQuery 
 
 ![BigQuery dataset](screenshots/04_bigquery_dataset.png)
 
+## Infrastructure as code
+
+The BigQuery dataset, a table schema and a read-only service account are defined with Terraform in [`terraform/`](terraform/): `terraform init`, `plan` and `apply` recreate them, and `terraform destroy` removes them. The service account only has read access to that one dataset. This covers the BigQuery part only (the sandbox has no billing), state is kept locally, and the table is created empty. See [`terraform/README.md`](terraform/README.md).
+
+![Terraform apply](screenshots/09_terraform_apply.png)
+
 ## How to run
 
 1. Download the CSV from data.gov.my (link above).
@@ -177,11 +178,11 @@ The gold tables were exported to CSV from Databricks and loaded into a BigQuery 
 - Schedule the notebooks with Databricks Workflows.
 - Make the anomaly detection seasonality-aware (for example by comparing each month with the same month in other years).
 - Rewrite transformations in PySpark and model the gold layer in dbt.
-- Define the infrastructure (BigQuery dataset, storage) as code with Terraform.
+- Extend Terraform to the remaining tables and use a remote state backend.
 
 ## Tech stack
 
-Databricks (serverless, Unity Catalog), SQL, Python, scikit-learn, BigQuery, Looker Studio, GitHub.
+Databricks (serverless, Unity Catalog), SQL, Python, scikit-learn, MCP, BigQuery, Looker Studio, Terraform, GitHub.
 
 ## Data attribution
 
