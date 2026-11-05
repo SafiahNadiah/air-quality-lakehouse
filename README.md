@@ -31,7 +31,7 @@ flowchart LR
     C --> D[Gold<br/>star schema + aggregate]
     D --> E[Data quality checks]
     D --> F[Analysis queries]
-    D -->|CSV export, manual load| G[BigQuery]
+    D -->|Python sync script| G[BigQuery]
     D -->|CSV export| I[SQLite copy]
     I --> J[MCP server]
     G --> H[Looker Studio dashboard]
@@ -50,9 +50,15 @@ Processing runs on Databricks Free Edition (serverless) using SQL and Python. Ta
 | `05_analysis_queries` | Trend, ranking and rolling-average queries |
 | `06_anomaly_detection` | Flag unusual months in the PM2.5 and NO2 series (robust z-score and Isolation Forest) |
 
-Run order is 01 to 06 (notebook 04 reads the gold tables).
+Run order is 01 to 06 (notebook 04 reads the gold tables), either by hand or through the Workflows job below.
 
 Record counts: bronze **576** rows (96 months x 6 pollutants), silver **576** rows (the row-count check confirms no rows were lost), gold fact **542** rows (the 576 silver rows minus 34 months without a measurement).
+
+## Orchestration
+
+The six notebooks run as one Databricks Workflows job (`air_quality_pipeline`) with task dependencies: bronze, silver, gold, data quality, analysis, anomaly detection. A critical data quality failure raises an exception, so the downstream tasks do not run. The job is started manually and is not on a schedule.
+
+![Databricks workflow](screenshots/10_databricks_workflow.png)
 
 ## Gold layer: star schema
 
@@ -150,9 +156,15 @@ Limitations: the methods look at the value only and do not remove seasonality or
 
 ## Serving layer: BigQuery and Looker Studio
 
-The gold tables were exported to CSV from Databricks and loaded into a BigQuery dataset (`air_quality`) using the BigQuery sandbox. A Looker Studio dashboard reads `gold_agg_yearly` and shows the yearly trend per pollutant, year-over-year change and data completeness.
+The gold tables were first exported to CSV from Databricks and loaded into a BigQuery dataset (`air_quality`) by hand using the BigQuery sandbox. A Looker Studio dashboard reads `gold_agg_yearly` from that dataset and shows the yearly trend per pollutant, year-over-year change and data completeness.
 
 ![BigQuery dataset](screenshots/04_bigquery_dataset.png)
+
+### Databricks to BigQuery sync
+
+[`sync/export_to_bigquery.py`](sync/export_to_bigquery.py) replaces the manual export. It reads the four gold star-schema tables from Databricks through a SQL warehouse and loads them into the BigQuery dataset `air_quality_auto` with one command, replacing the previous copy. Credentials come from environment variables, never from the code. It runs from a local machine, not on a schedule, and the dashboard still reads the original `air_quality` dataset.
+
+![Synced tables in BigQuery](screenshots/11_databricks_to_bigquery.png)
 
 ## Infrastructure as code
 
@@ -164,25 +176,26 @@ The BigQuery dataset, a table schema and a read-only service account are defined
 
 1. Download the CSV from data.gov.my (link above).
 2. In Databricks, upload it to the volume `workspace.air_quality.raw` (Catalog, then Upload to this volume) as `air_pollution.csv`.
-3. Run notebooks `01` to `06` in order. Every notebook can be re-run safely.
+3. Run notebooks `01` to `06` in order, or create a Databricks Workflows job with one task per notebook. Every notebook can be re-run safely.
+4. Optional: to copy the gold tables to BigQuery, set the environment variables described in `sync/export_to_bigquery.py` and run `python sync/export_to_bigquery.py`.
 
 ## Limitations
 
-- Built on free tiers. The Databricks to BigQuery load is a **manual CSV export and upload**, not an automated pipeline.
-- No scheduling or orchestration yet.
+- Built on free tiers. The Databricks to BigQuery sync is a **single local command**, not a scheduled or cloud-hosted job, and the Looker Studio dashboard still reads the original, manually loaded dataset.
+- The Workflows job is started manually and has no schedule.
 - Year-over-year change is misleading for partial years (2017 and 2024); check `months_with_data`.
 - Source data is national monthly averages, so station-level or daily analysis is not possible.
 
 ## Next steps
 
-- Schedule the notebooks with Databricks Workflows.
+- Put the Workflows job on a schedule and trigger the BigQuery sync as part of it.
 - Make the anomaly detection seasonality-aware (for example by comparing each month with the same month in other years).
 - Rewrite transformations in PySpark and model the gold layer in dbt.
 - Extend Terraform to the remaining tables and use a remote state backend.
 
 ## Tech stack
 
-Databricks (serverless, Unity Catalog), SQL, Python, scikit-learn, MCP, BigQuery, Looker Studio, Terraform, GitHub.
+Databricks (serverless, Unity Catalog, Workflows), SQL, Python, scikit-learn, MCP, BigQuery, Looker Studio, Terraform, GitHub.
 
 ## Data attribution
 
