@@ -64,10 +64,53 @@ The code uses version 2 of the MCP Python SDK (`MCPServer`). With version 1, imp
 | **`get_anomalies`** | **`data_quality_summary`** |
 | ![Anomalies](screenshot/03_anomalies.png) | ![Data quality](screenshot/04_data_quality.png) |
 
+## Testing
+
+The server is tested in two ways: an automated pytest suite, and manual checks in MCP Inspector.
+
+### Automated tests (pytest)
+
+`test_server.py` has 21 tests. They build a small temporary SQLite database, so they run anywhere without the real data.
+
+What they cover:
+
+- **Normal use**: lowercase pollutant names are normalised, years with fewer than 12 months are marked as partial, only flagged months are returned as anomalies, and only the latest data quality run is returned.
+- **Malformed input**: unknown or empty pollutant names, SQL-injection-style strings, and `n` values that are too large, negative or not a number. `n` is clamped to the range 1 to 12.
+- **Read-only enforcement**: `INSERT`, `UPDATE`, `DELETE` and `DROP` all fail because the database is opened with `mode=ro`, and the data is unchanged after every tool has been called.
+
+To run them (inside the virtual environment):
+
+```
+pip install pytest
+python -m pytest test_server.py -q
+```
+
+![pytest: 21 passed](screenshot/05_pytest_21_passed.png)
+
+### Manual checks in MCP Inspector
+
+| Input | Result |
+|---|---|
+| `get_yearly_average` with `XYZ` | Rejected by the allow-list (`ValueError: Unknown pollutant 'XYZ'`) |
+| `get_yearly_average` with `NO2; DROP TABLE gold_fact_air_quality` | Rejected before any SQL runs |
+| `top_worst_months` with `PM10` and `n = 999` | 12 rows returned (clamped) |
+
+![Unknown pollutant rejected](screenshot/06_mcp_unknown_pollutant.png)
+
+![SQL injection string rejected](screenshot/07_mcp_sql_injection_rejected.png)
+
+![n = 999 clamped to 12 rows](screenshot/08_mcp_n_clamped_to_12.png)
+
+### Notes on the design
+
+- None of the tools accept SQL from the caller. Each tool takes only a pollutant code or a small number, and the queries are fixed with bound parameters.
+- The read-only connection is a second layer of protection, not the only one.
+- MCP Inspector shows rejected calls as a generic "Error executing tool" message. The full `ValueError` message is in the Server Console and is checked directly by the pytest suite.
+
 ## Limitations
 
 - The data is a **copy** of the Databricks gold tables (a CSV export), not a live connection, so it must be exported again when the pipeline is re-run.
-- Tested with the MCP Inspector and a small test client. It has not been connected to an AI assistant yet.
+- Tested with an automated pytest suite, the MCP Inspector and a small test client. It has not been connected to an AI assistant yet.
 - Learning project built on public data (see the main README for the source and licence).
 
 ## Planned
