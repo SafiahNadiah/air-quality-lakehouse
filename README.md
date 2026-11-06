@@ -152,7 +152,7 @@ Limitations: the methods look at the value only and do not remove seasonality or
 
 ## MCP server
 
-[`mcp_server/`](mcp_server/) exposes the gold tables to AI clients through four read-only MCP tools (yearly averages, worst months, anomalies and data quality results). Inputs are validated, queries are fixed and parameterised, and the database is opened read-only. It reads a SQLite copy of the gold tables exported from Databricks, and was tested with the MCP Inspector. See [`mcp_server/README.md`](mcp_server/README.md).
+[`mcp_server/`](mcp_server/) exposes the gold tables to AI clients through four read-only MCP tools (yearly averages, worst months, anomalies and data quality results). Inputs are validated, queries are fixed and parameterised, and the database is opened read-only. It reads a SQLite copy of the gold tables exported from Databricks. An automated pytest suite (21 tests) covers normal use, malformed input and read-only enforcement, and runs in GitHub Actions on every push. It was also checked manually in the MCP Inspector. See [`mcp_server/README.md`](mcp_server/README.md).
 
 ## Serving layer: BigQuery and Looker Studio
 
@@ -195,7 +195,7 @@ The BigQuery dataset, a table schema and a read-only service account are defined
 
 ## Tech stack
 
-Databricks (serverless, Unity Catalog, Workflows), SQL, Python, scikit-learn, MCP, BigQuery, Looker Studio, Terraform, GitHub.
+Databricks (serverless, Unity Catalog, Workflows), SQL, Python, scikit-learn, MCP, pytest, BigQuery, Looker Studio, Terraform, GitHub, GitHub Actions.
 
 ## Data attribution
 
